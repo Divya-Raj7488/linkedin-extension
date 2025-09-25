@@ -7,7 +7,6 @@ export default defineManifest({
   action: { default_popup: 'src/popup/popup.html' },
   permissions: ['storage', 'scripting', 'activeTab', 'cookies'],
   host_permissions: ['https://www.linkedin.com/*'],
-  background: { service_worker: 'src/background/background.ts' },
   content_scripts: [
     {
       matches: ['https://www.linkedin.com/*'],
