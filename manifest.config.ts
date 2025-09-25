@@ -22,5 +22,4 @@ export default defineManifest({
     }
   ],
   options_page: 'dashboard/dashboard.html',
-  chrome_url_overrides: { newtab: 'dashboard/dashboard.html' }
 })
