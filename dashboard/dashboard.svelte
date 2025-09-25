@@ -8,7 +8,7 @@
   onMount(() => {
     chrome.tabs.query(
       {
-        url: "https://www.linkedin.com/mynetwork/invite-connect/connections/*",
+        url: "https://www.linkedin.com/*",
       },
       (tabs) => {
         const linkedInTab = tabs[0];
