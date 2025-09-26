@@ -1,6 +1,7 @@
 import { RawConnection } from '../types/connection'
 import {
   getCsrfToken,
+  getHeaders,
   getLinkedInCsrfToken,
   processConnectionData,
   waitForCondition
@@ -37,19 +38,7 @@ const fetchConnectionDetails = async (start: number, count = 40) => {
 
     const response = await fetch(url, {
       method: 'GET',
-      headers: {
-        accept: 'application/vnd.linkedin.normalized+json+2.1',
-        'accept-language': 'en-US,en;q=0.9',
-        'csrf-token': csrfToken,
-        'x-restli-protocol-version': '2.0.0',
-        'x-li-lang': 'en_US',
-        'sec-fetch-dest': 'empty',
-        'sec-fetch-mode': 'cors',
-        'sec-fetch-site': 'same-origin',
-        'user-agent': navigator.userAgent,
-        referer:
-          'https://www.linkedin.com/mynetwork/invite-connect/connections/'
-      },
+      headers: getHeaders(csrfToken,navigator.userAgent),
       credentials: 'include'
     })
 
@@ -60,7 +49,6 @@ const fetchConnectionDetails = async (start: number, count = 40) => {
     const { included } = await response.json()
     data = included
   } catch (err) {
-    console.error('Error fetching connections:', err)
     throw err
   }
   return data
@@ -76,7 +64,6 @@ const scrapeConnections = async () => {
       })
     return data
   } catch (error) {
-    console.error('Error scraping connections:', error)
     throw error
   }
 }
@@ -96,7 +83,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       return true
     }
   } catch (err) {
-    console.log('error while scraping connections')
     sendResponse({ success: false, error: (err as Error).message })
   }
 })

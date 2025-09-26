@@ -26,7 +26,6 @@ export function waitForCondition (
   })
 }
 
-
 export function extractProfileImage (
   photoObj: LinkedInPhoto | undefined,
   preferredWidth = 400
@@ -41,7 +40,6 @@ export function extractProfileImage (
 
   return artifact ? root + artifact.fileIdentifyingUrlPathSegment : null
 }
-
 
 export function processConnectionData (
   conn: RawConnection
@@ -106,5 +104,20 @@ export const getLinkedInCsrfToken = () => {
   } catch (error) {
     console.error('Error extracting CSRF token:', error)
     return null
+  }
+}
+
+export const getHeaders = (csrfToken: string, agent: string) => {
+  return {
+    accept: 'application/vnd.linkedin.normalized+json+2.1',
+    'accept-language': 'en-US,en;q=0.9',
+    'csrf-token': csrfToken,
+    'x-restli-protocol-version': '2.0.0',
+    'x-li-lang': 'en_US',
+    'sec-fetch-dest': 'empty',
+    'sec-fetch-mode': 'cors',
+    'sec-fetch-site': 'same-origin',
+    'user-agent': agent,
+    referer: 'https://www.linkedin.com/mynetwork/invite-connect/connections/'
   }
 }
