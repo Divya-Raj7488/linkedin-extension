@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
+  import Loader from "../src/component/loader.svelte";
 
   let connections = $state([]);
   let loading = $state(true);
@@ -8,7 +9,7 @@
   onMount(() => {
     chrome.tabs.query(
       {
-        url: "https://www.linkedin.com/mynetwork/invite-connect/connections/*",
+        url: "https://www.linkedin.com/*",
       },
       (tabs) => {
         const linkedInTab = tabs[0];
@@ -18,61 +19,66 @@
           return;
         }
 
-        chrome.tabs.sendMessage(linkedInTab.id, { type: "CHECK_LOGIN" }, (res) => {
-          if (chrome.runtime.lastError) {
-            error = "Content script not found. Are you on LinkedIn?";
-            loading = false;
-            return;
-          }
-
-          if (!res?.loggedIn) {
-            error = "User not logged in on LinkedIn";
-            loading = false;
-            return;
-          }
-
-          chrome.tabs.sendMessage(
-            linkedInTab.id,
-            { type: "SCRAPE_CONNECTIONS" },
-            (res) => {
-              if (res?.success) {
-                connections = res.data;
-              } else {
-                error = res?.error ?? "Failed to scrape connections";
-              }
+        chrome.tabs.sendMessage(
+          linkedInTab.id,
+          { type: "CHECK_LOGIN" },
+          (res) => {
+            if (chrome.runtime.lastError) {
+              error = "Content script not found. Are you on LinkedIn?";
               loading = false;
-            },
-          );
-        });
+              return;
+            }
+
+            if (!res?.loggedIn) {
+              error = "User not logged in on LinkedIn";
+              loading = false;
+              return;
+            }
+
+            chrome.tabs.sendMessage(
+              linkedInTab.id,
+              { type: "SCRAPE_CONNECTIONS" },
+              (res) => {
+                if (res?.success) {
+                  connections = res.data;
+                } else {
+                  error = res?.error ?? "Failed to scrape connections";
+                }
+                loading = false;
+              },
+            );
+          },
+        );
       },
     );
   });
 </script>
 
-<div class="p-6">
-  <h1 class="text-xl font-bold mb-4">LinkedIn Connections</h1>
-
-  {#if loading}
-    <p>Loading...</p>
-  {:else if error}
-    <p class="text-red-500">Error: {error}</p>
-  {:else if connections.length === 0}
-    <p>No connections found</p>
-  {:else}
-    <ul class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-      {#each connections as c}
-        <li class="flex items-center space-x-3 p-3 bg-white rounded shadow">
-          <img
-            class="w-12 h-12 rounded-full"
-            src={c.profilePicture}
-            alt={c.fullName}
-          />
-          <div>
-            <p class="font-semibold">{c.fullName}</p>
-            <p class="text-sm text-gray-600">{c.position}</p>
-          </div>
-        </li>
-      {/each}
-    </ul>
-  {/if}
+<div class="w-screen h-screen flex flex-col">
+  <h1 class="text-xl font-bold mb-4 pt-4 pl-4">LinkedIn Connections</h1>
+  <div class="w-full flex-1 flex flex-col justify-center items-center pb-4">
+    {#if loading}
+      <Loader />
+    {:else if error}
+      <h4 class="text-red-500 text-2xl font-medium">Error: {error}</h4>
+    {:else if connections.length === 0}
+    <h4 class="text-2xl font-medium">No connections found</h4>
+    {:else}
+      <ul class="w-full grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {#each connections as c}
+          <li class="flex items-center space-x-3 p-3 bg-white rounded shadow">
+            <img
+              class="w-12 h-12 rounded-full"
+              src={c.profilePicture}
+              alt={c.fullName}
+            />
+            <div>
+              <p class="font-semibold">{c.fullName}</p>
+              <p class="text-sm text-gray-600">{c.position} @ {c.Company}</p>
+            </div>
+          </li>
+        {/each}
+      </ul>
+    {/if}
+  </div>
 </div>
