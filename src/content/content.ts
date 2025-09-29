@@ -1,4 +1,4 @@
-import { RawConnection } from '../types/connection'
+import { ProcessedConnection, RawConnection } from '../types/connection'
 import {
   getCsrfToken,
   getHeaders,
@@ -6,8 +6,9 @@ import {
   processConnectionData,
   waitForCondition
 } from '../utils/connection'
+import Pqueue from 'p-queue'
 
-// const queue = new Pqueue({ concurrency: 1 })
+const queue = new Pqueue({ concurrency: 1 })
 
 async function isLoggedIn (): Promise<boolean> {
   const domReady = await waitForCondition(
@@ -38,7 +39,7 @@ const fetchConnectionDetails = async (start: number, count = 40) => {
 
     const response = await fetch(url, {
       method: 'GET',
-      headers: getHeaders(csrfToken,navigator.userAgent),
+      headers: getHeaders(csrfToken, navigator.userAgent),
       credentials: 'include'
     })
 
@@ -54,9 +55,9 @@ const fetchConnectionDetails = async (start: number, count = 40) => {
   return data
 }
 
-const scrapeConnections = async () => {
+const scrapeConnections = async (page: number, offset: number) => {
   try {
-    const connections = await fetchConnectionDetails(0, 40)
+    const connections = await fetchConnectionDetails(offset + (page * 40), 40)
     const data = connections
       .filter((con: any) => con.publicIdentifier)
       .map((connection: RawConnection) => {
@@ -67,15 +68,39 @@ const scrapeConnections = async () => {
     throw error
   }
 }
+const createReqQueue = async (offset: number) => {
+  const connections: ProcessedConnection[] = []
+
+  for (let i = 0; i < 5; i++) {
+    const delay = Math.random() * (1000 - 300) + 300
+
+    queue.add(async () => {
+      await new Promise(resolve => setTimeout(resolve, delay))
+      try {
+        const data: ProcessedConnection[] = await scrapeConnections(i, offset);
+        if(!data){
+          queue.clear();
+          return;
+        }
+        connections.push(...data)
+      } catch (err) {
+        i -= 1
+        console.log('Error occured. Fetching data again', err)
+      }
+    })
+  }
+  await queue.onIdle()
+  return connections
+}
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   try {
     if (message.type === 'CHECK_LOGIN') {
       sendResponse({ loggedIn: isLoggedIn() })
     } else if (message.type === 'SCRAPE_CONNECTIONS') {
-      scrapeConnections()
-        .then(data => {
-          sendResponse({ success: true, data })
+      createReqQueue(message.offset)
+        .then(connections => {
+          sendResponse({ success: true, data: connections })
         })
         .catch(err => {
           sendResponse({ success: false, error: (err as Error).message })

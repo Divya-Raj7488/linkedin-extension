@@ -27,4 +27,10 @@ export type ProcessedConnection = {
   position: string | null
   currentCompany: string | null
   profilePicture: string | null
+  publicIdentifier: string
+}
+
+export interface QueueItem {
+  fetchConnections: () => Promise<void>;
+  delay: number;
 }
