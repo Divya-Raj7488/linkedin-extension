@@ -1,4 +1,4 @@
-import { RawConnection } from '../types/connection'
+import { ProcessedConnection, RawConnection } from '../types/connection'
 import {
   getCsrfToken,
   getHeaders,
@@ -55,9 +55,9 @@ const fetchConnectionDetails = async (start: number, count = 40) => {
   return data
 }
 
-const scrapeConnections = async (page = 0) => {
+const scrapeConnections = async (page: number, offset: number) => {
   try {
-    const connections = await fetchConnectionDetails(page * 40, 40)
+    const connections = await fetchConnectionDetails(offset + (page * 40), 40)
     const data = connections
       .filter((con: any) => con.publicIdentifier)
       .map((connection: RawConnection) => {
@@ -68,17 +68,26 @@ const scrapeConnections = async (page = 0) => {
     throw error
   }
 }
-const createReqQueue = async () => {
-  const connections: RawConnection[] = []
+const createReqQueue = async (offset: number) => {
+  const connections: ProcessedConnection[] = []
+
   for (let i = 0; i < 5; i++) {
     const delay = Math.random() * (1000 - 300) + 300
-    let data: RawConnection[] = [];
+
     queue.add(async () => {
       await new Promise(resolve => setTimeout(resolve, delay))
-      data = await scrapeConnections(i)
-      connections.push(...data)
+      try {
+        const data: ProcessedConnection[] = await scrapeConnections(i, offset);
+        if(!data){
+          queue.clear();
+          return;
+        }
+        connections.push(...data)
+      } catch (err) {
+        i -= 1
+        console.log('Error occured. Fetching data again', err)
+      }
     })
-    if(!data || data.length === 0 || data.length< 40) break;
   }
   await queue.onIdle()
   return connections
@@ -89,7 +98,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type === 'CHECK_LOGIN') {
       sendResponse({ loggedIn: isLoggedIn() })
     } else if (message.type === 'SCRAPE_CONNECTIONS') {
-      createReqQueue()
+      createReqQueue(message.offset)
         .then(connections => {
           sendResponse({ success: true, data: connections })
         })

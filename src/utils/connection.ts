@@ -50,18 +50,21 @@ export function processConnectionData (
   let currentCompany: string | null = null
 
   if (conn.headline) {
+    console.log(conn.headline)
     const parts = conn.headline.split('|')[0]?.split('@')
     position = parts[0] || null
     currentCompany = parts[1] || null
   }
 
   const profilePicture = extractProfileImage(conn.profilePicture)
+  const publicIdentifier = conn.publicIdentifier
 
   return {
     fullName,
     position,
     currentCompany,
-    profilePicture
+    profilePicture,
+    publicIdentifier
   }
 }
 
