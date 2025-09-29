@@ -1,4 +1,5 @@
 import {
+  CachedConnections,
   LinkedInPhoto,
   ProcessedConnection,
   RawConnection
@@ -123,4 +124,44 @@ export const getHeaders = (csrfToken: string, agent: string) => {
     'user-agent': agent,
     referer: 'https://www.linkedin.com/mynetwork/invite-connect/connections/'
   }
+}
+
+export const fetchCachedData = async (
+  offset: number
+): Promise<ProcessedConnection[]> => {
+  const requestedBatchId = Math.floor(offset / 200)
+  const key = `linkedin_connection_${requestedBatchId}`
+  const itemStr = localStorage.getItem(key)
+
+  if (!itemStr) return []
+
+  try {
+    const cacheEntry: CachedConnections = JSON.parse(itemStr)
+    if (Date.now() < cacheEntry.expires) {
+      return cacheEntry.data
+    } else {
+      localStorage.removeItem(key)
+      return []
+    }
+  } catch (err) {
+    console.error(`Error parsing cached batch ${requestedBatchId}:`, err)
+    localStorage.removeItem(key)
+    return []
+  }
+}
+
+export const cacheData = (data: ProcessedConnection[]) => {
+  const BATCH_COUNT_KEY = 'connections_batch_count';
+  if (!data || data.length === 0) return
+
+  const batchCount = parseInt(localStorage.getItem(BATCH_COUNT_KEY) || '0', 10)
+  const key = `linkedin_connection_${batchCount}`
+
+  const cacheEntry: CachedConnections = {
+    expires: Date.now() + 10 * 60 * 1000, // 10 minutes TTL
+    data
+  }
+
+  localStorage.setItem(key, JSON.stringify(cacheEntry))
+  localStorage.setItem(BATCH_COUNT_KEY, (batchCount + 1).toString())
 }

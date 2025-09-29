@@ -1,5 +1,7 @@
 import { ProcessedConnection, RawConnection } from '../types/connection'
 import {
+  cacheData,
+  fetchCachedData,
   getCsrfToken,
   getHeaders,
   getLinkedInCsrfToken,
@@ -57,7 +59,7 @@ const fetchConnectionDetails = async (start: number, count = 40) => {
 
 const scrapeConnections = async (page: number, offset: number) => {
   try {
-    const connections = await fetchConnectionDetails(offset + (page * 40), 40)
+    const connections = await fetchConnectionDetails(offset + page * 40, 40)
     const data = connections
       .filter((con: any) => con.publicIdentifier)
       .map((connection: RawConnection) => {
@@ -77,10 +79,10 @@ const createReqQueue = async (offset: number) => {
     queue.add(async () => {
       await new Promise(resolve => setTimeout(resolve, delay))
       try {
-        const data: ProcessedConnection[] = await scrapeConnections(i, offset);
-        if(!data){
-          queue.clear();
-          return;
+        const data: ProcessedConnection[] = await scrapeConnections(i, offset)
+        if (!data) {
+          queue.clear()
+          return
         }
         connections.push(...data)
       } catch (err) {
@@ -98,13 +100,21 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type === 'CHECK_LOGIN') {
       sendResponse({ loggedIn: isLoggedIn() })
     } else if (message.type === 'SCRAPE_CONNECTIONS') {
-      createReqQueue(message.offset)
-        .then(connections => {
-          sendResponse({ success: true, data: connections })
-        })
-        .catch(err => {
-          sendResponse({ success: false, error: (err as Error).message })
-        })
+
+      fetchCachedData(message.offset).then(cachedData => {
+        if (cachedData && cachedData.length > 0) {
+          sendResponse({ success: true, data: cachedData })
+          return;
+        }
+        createReqQueue(message.offset)
+          .then(connections => {
+            cacheData(connections)
+            sendResponse({ success: true, data: connections })
+          })
+          .catch(err => {
+            sendResponse({ success: false, error: (err as Error).message })
+          })
+      })
       return true
     }
   } catch (err) {

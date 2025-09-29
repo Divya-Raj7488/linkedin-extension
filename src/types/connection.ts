@@ -34,3 +34,8 @@ export interface QueueItem {
   fetchConnections: () => Promise<void>;
   delay: number;
 }
+
+export interface CachedConnections {
+  expires: number;
+  data: ProcessedConnection[];
+}
