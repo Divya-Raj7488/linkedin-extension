@@ -28,3 +28,8 @@ export type ProcessedConnection = {
   currentCompany: string | null
   profilePicture: string | null
 }
+
+export interface QueueItem {
+  fetchConnections: () => Promise<void>;
+  delay: number;
+}

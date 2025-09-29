@@ -65,8 +65,9 @@
     <h4 class="text-2xl font-medium">No connections found</h4>
     {:else}
       <ul class="w-full grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {#each connections as c}
+        {#each connections as c, i}
           <li class="flex items-center space-x-3 p-3 bg-white rounded shadow">
+            <span class="pr-2">{i + 1}</span>
             <img
               class="w-12 h-12 rounded-full"
               src={c.profilePicture}
